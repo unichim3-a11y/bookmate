@@ -68,9 +68,6 @@ bookmate/
 ├── styles.css                           # Toàn bộ stylesheet, theme & responsive mobile
 ├── app.js                              # Logic ứng dụng, QR sync, Cloud sync, touch gesture, TTS
 ├── qrcode.min.js                        # Thư viện tạo mã QR offline
-├── sync_architecture.d2                 # Định nghĩa sơ đồ kiến trúc đồng bộ D2
-├── sync_architecture.png                # Ảnh sơ đồ kiến trúc đồng bộ xuất từ D2
-├── sync_architecture.svg                # Ảnh vector sơ đồ kiến trúc đồng bộ
 ├── kinh_te_hoc_co_ban_data.json         # Dữ liệu nội dung Kinh Tế Học Cơ Bản
 ├── sapiens_data.json                    # Dữ liệu nội dung Sapiens
 ├── Kinh Tế Học Cơ Bản...pdf             # File PDF tham chiếu
