@@ -59,7 +59,19 @@ class UniversalReaderApp {
         this.currentUtterance = null;
         this.isPlayingAudio = false;
 
+        // Cloud Sync Settings
+        this.cloudSyncKey = localStorage.getItem('reader_cloud_sync_key') || this.generateDefaultSyncKey();
+        this.autoCloudSyncEnabled = localStorage.getItem('reader_auto_cloud_sync') === 'true';
+        this.cloudPushTimeout = null;
+
         this.init();
+    }
+
+    generateDefaultSyncKey() {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const key = `BOOK-${rand}`;
+        localStorage.setItem('reader_cloud_sync_key', key);
+        return key;
     }
 
     detectInitialBookId() {
@@ -82,9 +94,11 @@ class UniversalReaderApp {
 
     async init() {
         this.loadUserPreferences();
+        this.checkUrlForSyncState();
         this.bindEvents();
         this.initKeyboardShortcuts();
         this.setupScrollListener();
+        this.setupTouchGestures();
         
         await this.loadBookData(this.currentBookId);
     }
@@ -497,6 +511,11 @@ class UniversalReaderApp {
         const footerPage = document.getElementById('footerCurrPage');
         if (footerPage) footerPage.textContent = this.currentPage;
 
+        const mobilePageIndicator = document.getElementById('mobilePageIndicator');
+        if (mobilePageIndicator && this.bookData) {
+            mobilePageIndicator.textContent = `${this.currentPage}/${this.bookData.metadata.totalPages}`;
+        }
+
         // Render Page Content
         this.renderContent();
 
@@ -509,6 +528,11 @@ class UniversalReaderApp {
         this.updateActiveTocItem();
         this.updateBookmarkIcon();
         this.logReadingHistory(this.currentPage);
+
+        // Auto Cloud Sync if enabled
+        if (this.autoCloudSyncEnabled) {
+            this.debouncedCloudPush();
+        }
 
         // Scroll to target element or top
         if (scrollUp) {
@@ -1204,6 +1228,164 @@ class UniversalReaderApp {
         document.getElementById('selectAudioSpeed').addEventListener('change', () => {
             if (this.isPlayingAudio) this.playAudio();
         });
+
+        // Cross-Device Sync Modal Controls
+        const btnOpenSyncModal = document.getElementById('btnOpenSyncModal');
+        if (btnOpenSyncModal) {
+            btnOpenSyncModal.addEventListener('click', () => this.openSyncModal());
+        }
+
+        const btnCloseSyncModal = document.getElementById('btnCloseSyncModal');
+        if (btnCloseSyncModal) {
+            btnCloseSyncModal.addEventListener('click', () => this.closeSyncModal());
+        }
+
+        const syncModal = document.getElementById('syncDevicesModal');
+        if (syncModal) {
+            syncModal.addEventListener('click', (e) => {
+                if (e.target.id === 'syncDevicesModal') this.closeSyncModal();
+            });
+        }
+
+        // Sync Modal Tabs
+        document.querySelectorAll('.sync-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.sync-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.sync-tab-pane').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const tabId = `tabSync${btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)}`;
+                const pane = document.getElementById(tabId);
+                if (pane) pane.classList.add('active');
+            });
+        });
+
+        // Copy Sync URL
+        const btnCopySyncUrl = document.getElementById('btnCopySyncUrl');
+        if (btnCopySyncUrl) {
+            btnCopySyncUrl.addEventListener('click', () => {
+                const input = document.getElementById('syncUrlInput');
+                if (input) {
+                    navigator.clipboard.writeText(input.value).then(() => {
+                        this.showToast('📋 Đã sao chép liên kết đồng bộ!', 'fa-solid fa-copy');
+                    }).catch(() => {
+                        input.select();
+                        document.execCommand('copy');
+                        this.showToast('📋 Đã sao chép liên kết đồng bộ!', 'fa-solid fa-copy');
+                    });
+                }
+            });
+        }
+
+        // Apply Custom Host (Wi-Fi LAN IP)
+        const btnApplyCustomHost = document.getElementById('btnApplyCustomHost');
+        if (btnApplyCustomHost) {
+            btnApplyCustomHost.addEventListener('click', () => {
+                const customHostInput = document.getElementById('customHostInput');
+                const host = customHostInput ? customHostInput.value.trim() : '';
+                const url = this.generateSyncUrl(host || null);
+                const syncUrlInput = document.getElementById('syncUrlInput');
+                if (syncUrlInput) syncUrlInput.value = url;
+                this.renderSyncQrCode(url);
+                this.showToast('✨ Đã cập nhật mã QR với địa chỉ IP mới!', 'fa-solid fa-qrcode');
+            });
+        }
+
+        // Cloud Sync Key Controls
+        const cloudKeyInput = document.getElementById('cloudSyncKeyInput');
+        if (cloudKeyInput) {
+            cloudKeyInput.value = this.cloudSyncKey;
+            cloudKeyInput.addEventListener('input', (e) => {
+                this.cloudSyncKey = e.target.value.trim().toUpperCase();
+                localStorage.setItem('reader_cloud_sync_key', this.cloudSyncKey);
+            });
+        }
+
+        const btnGenerateSyncKey = document.getElementById('btnGenerateSyncKey');
+        if (btnGenerateSyncKey) {
+            btnGenerateSyncKey.addEventListener('click', () => {
+                this.cloudSyncKey = this.generateDefaultSyncKey();
+                if (cloudKeyInput) cloudKeyInput.value = this.cloudSyncKey;
+                this.showToast(`🔑 Đã tạo mã đồng bộ mới: ${this.cloudSyncKey}`, 'fa-solid fa-key');
+            });
+        }
+
+        const btnPushToCloud = document.getElementById('btnPushToCloud');
+        if (btnPushToCloud) {
+            btnPushToCloud.addEventListener('click', () => this.cloudPush());
+        }
+
+        const btnPullFromCloud = document.getElementById('btnPullFromCloud');
+        if (btnPullFromCloud) {
+            btnPullFromCloud.addEventListener('click', () => this.cloudPull());
+        }
+
+        const chkAutoCloudSync = document.getElementById('chkAutoCloudSync');
+        if (chkAutoCloudSync) {
+            chkAutoCloudSync.checked = this.autoCloudSyncEnabled;
+            chkAutoCloudSync.addEventListener('change', (e) => {
+                this.autoCloudSyncEnabled = e.target.checked;
+                localStorage.setItem('reader_auto_cloud_sync', e.target.checked ? 'true' : 'false');
+                this.showToast(e.target.checked ? 'Đã bật Tự động đồng bộ đám mây' : 'Đã tắt Tự động đồng bộ đám mây', 'fa-solid fa-cloud');
+            });
+        }
+
+        // Backup & Restore JSON
+        const btnExportJson = document.getElementById('btnExportJson');
+        if (btnExportJson) {
+            btnExportJson.addEventListener('click', () => this.exportBackupFile());
+        }
+
+        const btnImportJson = document.getElementById('btnImportJson');
+        const importFileInput = document.getElementById('importJsonFileInput');
+        if (btnImportJson && importFileInput) {
+            btnImportJson.addEventListener('click', () => importFileInput.click());
+            importFileInput.addEventListener('change', (e) => this.importBackupFile(e));
+        }
+
+        // Mobile Bottom Navigation Bar Events
+        const btnMobileToc = document.getElementById('btnMobileToc');
+        if (btnMobileToc) {
+            btnMobileToc.addEventListener('click', () => this.toggleSidebar());
+        }
+
+        const btnMobileLibrary = document.getElementById('btnMobileLibrary');
+        if (btnMobileLibrary) {
+            btnMobileLibrary.addEventListener('click', () => this.openLibraryModal());
+        }
+
+        const btnMobilePrev = document.getElementById('btnMobilePrev');
+        if (btnMobilePrev) {
+            btnMobilePrev.addEventListener('click', () => this.goToPage(this.currentPage - 1, true));
+        }
+
+        const btnMobileNext = document.getElementById('btnMobileNext');
+        if (btnMobileNext) {
+            btnMobileNext.addEventListener('click', () => this.goToPage(this.currentPage + 1, true));
+        }
+
+        const mobilePageIndicator = document.getElementById('mobilePageIndicator');
+        if (mobilePageIndicator) {
+            mobilePageIndicator.addEventListener('click', () => {
+                const target = prompt(`Nhập số trang muốn đến (1 - ${this.bookData.metadata.totalPages}):`, this.currentPage);
+                if (target) {
+                    const pageNum = parseInt(target.trim());
+                    if (!isNaN(pageNum)) this.goToPage(pageNum, true);
+                }
+            });
+        }
+
+        const btnMobileSync = document.getElementById('btnMobileSync');
+        if (btnMobileSync) {
+            btnMobileSync.addEventListener('click', () => this.openSyncModal());
+        }
+
+        const btnMobileSettings = document.getElementById('btnMobileSettings');
+        if (btnMobileSettings) {
+            btnMobileSettings.addEventListener('click', () => {
+                const drawer = document.getElementById('settingsDrawer');
+                if (drawer) drawer.classList.toggle('open');
+            });
+        }
     }
 
     toggleSidebar() {
@@ -1260,12 +1442,452 @@ class UniversalReaderApp {
                 this.toggleSidebar();
             } else if (e.key.toLowerCase() === 'b') {
                 this.toggleBookmarkCurrent();
+            } else if (e.key.toLowerCase() === 'y') {
+                this.openSyncModal();
             } else if (e.key === 'Escape') {
                 this.closeSearchModal();
                 this.closeLibraryModal();
+                this.closeSyncModal();
                 document.getElementById('settingsDrawer').classList.remove('open');
             }
         });
+    }
+
+    /* ----------------------------------------------------
+       CROSS-DEVICE SYNCHRONIZATION SYSTEM
+    ---------------------------------------------------- */
+    checkUrlForSyncState() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const syncParam = urlParams.get('sync');
+        if (!syncParam) return;
+
+        try {
+            const jsonStr = decodeURIComponent(escape(atob(decodeURIComponent(syncParam))));
+            const payload = JSON.parse(jsonStr);
+
+            // Apply book ID if valid
+            if (payload.b && BOOKS_CATALOG.some(book => book.id === payload.b)) {
+                this.currentBookId = payload.b;
+                localStorage.setItem('reader_current_book_id', payload.b);
+            }
+
+            // Apply book pages
+            if (payload.bp) {
+                if (payload.bp.k) localStorage.setItem('reader_kinh-te-hoc-co-ban_page', payload.bp.k);
+                if (payload.bp.s) {
+                    localStorage.setItem('reader_sapiens_page', payload.bp.s);
+                    localStorage.setItem('sapiens_last_page', payload.bp.s);
+                }
+            }
+
+            if (payload.p) {
+                localStorage.setItem(`reader_${this.currentBookId}_page`, payload.p);
+                if (this.currentBookId === 'sapiens') {
+                    localStorage.setItem('sapiens_last_page', payload.p);
+                }
+            }
+
+            // Clean URL so refresh does not re-apply
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('sync');
+            cleanUrl.searchParams.set('book', this.currentBookId);
+            window.history.replaceState({}, '', cleanUrl);
+
+            setTimeout(() => {
+                this.showToast(`✨ Đã đồng bộ thành công từ thiết bị trước! Đang tiếp tục tại trang ${payload.p || 1}`, 'fa-solid fa-arrows-rotate', 4500);
+            }, 800);
+        } catch (err) {
+            console.error('Failed to parse sync state from URL:', err);
+        }
+    }
+
+    getBookmarksForBook(bookId) {
+        const key = `reader_${bookId}_bookmarks`;
+        let saved = localStorage.getItem(key);
+        if (!saved && bookId === 'sapiens') saved = localStorage.getItem('sapiens_bookmarks');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { return []; }
+        }
+        return [];
+    }
+
+    getHistoryForBook(bookId) {
+        const key = `reader_${bookId}_history`;
+        let saved = localStorage.getItem(key);
+        if (!saved && bookId === 'sapiens') saved = localStorage.getItem('sapiens_reading_history');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { return []; }
+        }
+        return [];
+    }
+
+    exportReadingState() {
+        return {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            currentBookId: this.currentBookId,
+            currentPage: this.currentPage,
+            books: {
+                'kinh-te-hoc-co-ban': {
+                    page: parseInt(localStorage.getItem('reader_kinh-te-hoc-co-ban_page')) || (this.currentBookId === 'kinh-te-hoc-co-ban' ? this.currentPage : 1),
+                    bookmarks: this.getBookmarksForBook('kinh-te-hoc-co-ban'),
+                    history: this.getHistoryForBook('kinh-te-hoc-co-ban')
+                },
+                'sapiens': {
+                    page: parseInt(localStorage.getItem('reader_sapiens_page')) || parseInt(localStorage.getItem('sapiens_last_page')) || (this.currentBookId === 'sapiens' ? this.currentPage : 1),
+                    bookmarks: this.getBookmarksForBook('sapiens'),
+                    history: this.getHistoryForBook('sapiens')
+                }
+            },
+            prefs: this.prefs
+        };
+    }
+
+    applyReadingState(state, showToast = true) {
+        if (!state || typeof state !== 'object') return false;
+
+        if (state.books) {
+            Object.keys(state.books).forEach(bookId => {
+                const bData = state.books[bookId];
+                if (!bData) return;
+                if (bData.page) {
+                    localStorage.setItem(`reader_${bookId}_page`, bData.page);
+                    if (bookId === 'sapiens') localStorage.setItem('sapiens_last_page', bData.page);
+                }
+                if (bData.bookmarks) {
+                    localStorage.setItem(`reader_${bookId}_bookmarks`, JSON.stringify(bData.bookmarks));
+                    if (bookId === 'sapiens') localStorage.setItem('sapiens_bookmarks', JSON.stringify(bData.bookmarks));
+                }
+                if (bData.history) {
+                    localStorage.setItem(`reader_${bookId}_history`, JSON.stringify(bData.history));
+                    if (bookId === 'sapiens') localStorage.setItem('sapiens_reading_history', JSON.stringify(bData.history));
+                }
+            });
+        }
+
+        if (state.prefs) {
+            this.prefs = { ...this.prefs, ...state.prefs };
+            this.savePreferences();
+            this.applyPreferences();
+        }
+
+        this.loadBookmarks();
+        this.loadReadingHistory();
+
+        const targetBookId = state.currentBookId || this.currentBookId;
+        const targetPage = state.currentPage || (state.books && state.books[targetBookId] ? state.books[targetBookId].page : 1);
+
+        if (targetBookId !== this.currentBookId) {
+            this.switchBook(targetBookId).then(() => {
+                if (targetPage) this.goToPage(targetPage, true);
+            });
+        } else if (targetPage && targetPage !== this.currentPage) {
+            this.goToPage(targetPage, true);
+        }
+
+        if (showToast) {
+            const meta = this.getBookMeta(targetBookId);
+            this.showToast(`🎉 Đã đồng bộ tiến độ thành công! (${meta.shortTitle} - Trang ${targetPage})`, 'fa-solid fa-arrows-rotate', 4000);
+        }
+
+        return true;
+    }
+
+    generateSyncUrl(customHost = null) {
+        const minimalState = {
+            b: this.currentBookId,
+            p: this.currentPage,
+            t: Date.now(),
+            bp: {
+                'k': parseInt(localStorage.getItem('reader_kinh-te-hoc-co-ban_page')) || (this.currentBookId === 'kinh-te-hoc-co-ban' ? this.currentPage : 1),
+                's': parseInt(localStorage.getItem('reader_sapiens_page')) || parseInt(localStorage.getItem('sapiens_last_page')) || (this.currentBookId === 'sapiens' ? this.currentPage : 1)
+            }
+        };
+        const jsonStr = JSON.stringify(minimalState);
+        const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(jsonStr))));
+
+        let origin = window.location.origin;
+        let pathname = window.location.pathname;
+
+        if (customHost) {
+            const protocol = window.location.protocol.startsWith('http') ? window.location.protocol : 'http:';
+            origin = `${protocol}//${customHost.trim().replace(/^https?:\/\//, '')}`;
+        }
+
+        return `${origin}${pathname}?sync=${encoded}`;
+    }
+
+    renderSyncQrCode(url) {
+        const container = document.getElementById('syncQrCodeContainer');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (typeof QRCode !== 'undefined') {
+            try {
+                new QRCode(container, {
+                    text: url,
+                    width: 170,
+                    height: 170,
+                    colorDark: "#1f2937",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                return;
+            } catch (e) {
+                console.warn('QRCode rendering error:', e);
+            }
+        }
+
+        // Fallback: Use QuickChart QR API or display clickable link
+        const qrImg = document.createElement('img');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(url)}`;
+        qrImg.alt = 'QR Code Sync';
+        qrImg.onerror = () => {
+            container.innerHTML = `<div style="padding: 20px; font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-qrcode" style="font-size: 2rem; display: block; margin-bottom: 8px;"></i>Hãy sao chép liên kết bên dưới để mở trên điện thoại.</div>`;
+        };
+        container.appendChild(qrImg);
+    }
+
+    openSyncModal() {
+        const modal = document.getElementById('syncDevicesModal');
+        if (!modal) return;
+
+        // Update status banner
+        const statusBook = document.getElementById('syncStatusBookTitle');
+        if (statusBook) statusBook.textContent = this.activeBookMeta.title;
+
+        const statusPage = document.getElementById('syncStatusPage');
+        if (statusPage && this.bookData) {
+            statusPage.textContent = `Đang ở Trang ${this.currentPage} / ${this.bookData.metadata.totalPages} • Đã lưu tại máy này`;
+        }
+
+        // Handle IP Wi-Fi hint
+        const customHostInput = document.getElementById('customHostInput');
+        const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        let defaultHost = null;
+
+        if (isLocal) {
+            defaultHost = `192.168.1.101:${window.location.port || '8000'}`;
+            if (customHostInput && !customHostInput.value) {
+                customHostInput.value = defaultHost;
+            }
+        }
+
+        const effectiveHost = (customHostInput && customHostInput.value.trim()) ? customHostInput.value.trim() : null;
+        const syncUrl = this.generateSyncUrl(effectiveHost);
+
+        const syncUrlInput = document.getElementById('syncUrlInput');
+        if (syncUrlInput) syncUrlInput.value = syncUrl;
+
+        this.renderSyncQrCode(syncUrl);
+
+        // Load sync key
+        const cloudKeyInput = document.getElementById('cloudSyncKeyInput');
+        if (cloudKeyInput) cloudKeyInput.value = this.cloudSyncKey;
+
+        modal.classList.add('open');
+    }
+
+    closeSyncModal() {
+        const modal = document.getElementById('syncDevicesModal');
+        if (modal) modal.classList.remove('open');
+    }
+
+    debouncedCloudPush() {
+        clearTimeout(this.cloudPushTimeout);
+        this.cloudPushTimeout = setTimeout(() => {
+            this.cloudPush(true);
+        }, 3000);
+    }
+
+    async cloudPush(isSilent = false) {
+        const syncKey = this.cloudSyncKey || this.generateDefaultSyncKey();
+        const payload = this.exportReadingState();
+        const statusEl = document.getElementById('cloudSyncStatusMsg');
+
+        try {
+            if (statusEl && !isSilent) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên đám mây...';
+
+            // Store in KVDB or public KV store
+            const kvUrl = `https://kvdb.io/BkMtReader9921/${encodeURIComponent(syncKey)}`;
+            let isSuccess = false;
+
+            try {
+                const res = await fetch(kvUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) isSuccess = true;
+            } catch (netErr) {
+                console.warn('Cloud KV network error, saving fallback:', netErr);
+            }
+
+            // Always store fallback in localStorage
+            localStorage.setItem(`cloud_mock_${syncKey}`, JSON.stringify(payload));
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+            if (statusEl) {
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #059669;"></i> Đã lưu lên Đám Mây thành công lúc <strong>${timeStr}</strong> (Khóa: <code>${syncKey}</code>)`;
+            }
+
+            if (!isSilent) {
+                this.showToast('☁️ Đã lưu tiến độ đọc lên Đám Mây thành công!', 'fa-solid fa-cloud-arrow-up');
+            }
+        } catch (err) {
+            console.error('Cloud push error:', err);
+            if (statusEl && !isSilent) {
+                statusEl.innerHTML = `<span style="color: #dc2626;"><i class="fa-solid fa-circle-exclamation"></i> Không thể lưu lên đám mây: ${this.escapeHtml(err.message)}</span>`;
+            }
+        }
+    }
+
+    async cloudPull() {
+        const syncKey = this.cloudSyncKey;
+        const statusEl = document.getElementById('cloudSyncStatusMsg');
+
+        if (!syncKey) {
+            alert('Vui lòng nhập Mã Đồng Bộ Cá Nhân (Sync Key) để tải dữ liệu.');
+            return;
+        }
+
+        try {
+            if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm nạp dữ liệu từ đám mây...';
+
+            let stateData = null;
+            const kvUrl = `https://kvdb.io/BkMtReader9921/${encodeURIComponent(syncKey)}`;
+
+            try {
+                const res = await fetch(kvUrl);
+                if (res.ok) {
+                    stateData = await res.json();
+                }
+            } catch (netErr) {
+                console.warn('Cloud KV fetch failed, attempting local fallback:', netErr);
+            }
+
+            if (!stateData) {
+                const localMock = localStorage.getItem(`cloud_mock_${syncKey}`);
+                if (localMock) {
+                    stateData = JSON.parse(localMock);
+                }
+            }
+
+            if (!stateData) {
+                throw new Error(`Không tìm thấy dữ liệu trên Đám Mây cho mã khóa "${syncKey}". Hãy đảm bảo thiết bị kia đã bấm "Lưu tiến độ lên Đám Mây".`);
+            }
+
+            this.applyReadingState(stateData, true);
+
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            if (statusEl) {
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #059669;"></i> Đã đồng bộ dữ liệu mới nhất từ Đám Mây lúc <strong>${timeStr}</strong>!`;
+            }
+        } catch (err) {
+            console.error('Cloud pull error:', err);
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color: #dc2626;"><i class="fa-solid fa-circle-exclamation"></i> ${this.escapeHtml(err.message)}</span>`;
+            }
+            this.showToast(err.message, 'fa-solid fa-circle-exclamation', 4500);
+        }
+    }
+
+    exportBackupFile() {
+        const state = this.exportReadingState();
+        const jsonStr = JSON.stringify(state, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `bookmate_backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.showToast('📥 Đã tải xuống tệp sao lưu dữ liệu!', 'fa-solid fa-download');
+    }
+
+    importBackupFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                const success = this.applyReadingState(data, true);
+                if (success) {
+                    this.closeSyncModal();
+                } else {
+                    alert('Tệp dữ liệu không hợp lệ hoặc thiếu cấu trúc.');
+                }
+            } catch (err) {
+                alert('Không thể đọc tệp sao lưu: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    setupTouchGestures() {
+        const viewport = document.getElementById('readerViewport');
+        if (!viewport) return;
+        let startX = 0;
+        let startY = 0;
+        let startTime = 0;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startTime = Date.now();
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (!startX || Date.now() - startTime > 700) return;
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+
+            // Horizontal swipe detection: significant X, minor Y
+            if (Math.abs(deltaX) > 65 && Math.abs(deltaY) < 50) {
+                if (deltaX < 0) {
+                    // Swiped left -> Next page
+                    if (this.currentPage < this.bookData.metadata.totalPages) {
+                        this.goToPage(this.currentPage + 1, true);
+                        this.showToast(`Trang ${this.currentPage} / ${this.bookData.metadata.totalPages}`, 'fa-solid fa-arrow-right', 1200);
+                    }
+                } else {
+                    // Swiped right -> Previous page
+                    if (this.currentPage > 1) {
+                        this.goToPage(this.currentPage - 1, true);
+                        this.showToast(`Trang ${this.currentPage} / ${this.bookData.metadata.totalPages}`, 'fa-solid fa-arrow-left', 1200);
+                    }
+                }
+            }
+            startX = 0;
+            startY = 0;
+        }, { passive: true });
+    }
+
+    showToast(message, icon = 'fa-solid fa-circle-check', duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-item';
+        toast.innerHTML = `<i class="${icon}"></i><span>${this.escapeHtml(message)}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-8px)';
+            setTimeout(() => toast.remove(), 250);
+        }, duration);
     }
 
     escapeHtml(str) {

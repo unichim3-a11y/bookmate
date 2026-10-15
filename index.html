@@ -2,9 +2,13 @@
 <html lang="vi" data-theme="beige">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Web Reader - Đọc Sách Điện Tử HD</title>
     <meta name="description" content="Ứng dụng đọc sách điện tử chất lượng cao với Kinh Tế Học Cơ Bản (Thomas Sowell) và Sapiens (Yuval Noah Harari).">
+    <meta name="theme-color" content="#ede8dc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +17,9 @@
     
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- QRCode Library -->
+    <script src="qrcode.min.js"></script>
     
     <!-- App Stylesheet -->
     <link rel="stylesheet" href="styles.css">
@@ -70,6 +77,9 @@
                 </button>
                 <button id="btnHistoryQuick" class="icon-btn" title="Lịch sử đọc">
                     <i class="fa-solid fa-clock-rotate-left"></i>
+                </button>
+                <button id="btnOpenSyncModal" class="icon-btn sync-btn-highlight" title="Đồng bộ đa thiết bị (PC ↔ Mobile)">
+                    <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
                 <button id="btnSettings" class="icon-btn" title="Tùy chỉnh giao diện">
                     <i class="fa-solid fa-sliders"></i>
@@ -363,6 +373,171 @@
                 <button id="btnCloseAudioBar" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
+
+        <!-- Cross-Device Sync Modal -->
+        <div id="syncDevicesModal" class="modal-overlay">
+            <div class="modal-card sync-modal-card">
+                <div class="modal-header">
+                    <div class="sync-header-title">
+                        <i class="fa-solid fa-arrows-rotate modal-title-icon"></i>
+                        <div>
+                            <h3>Đồng Bộ Đa Thiết Bị</h3>
+                            <p class="modal-subtitle">Chuyển đổi và đồng bộ lịch sử đọc sách liền mạch giữa PC và Điện thoại</p>
+                        </div>
+                    </div>
+                    <button id="btnCloseSyncModal" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body sync-modal-body">
+                    <!-- Sync Tabs -->
+                    <div class="sync-tabs">
+                        <button class="sync-tab-btn active" data-tab="qr">
+                            <i class="fa-solid fa-qrcode"></i> Quét QR tức thì
+                        </button>
+                        <button class="sync-tab-btn" data-tab="cloud">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Đám mây (Cloud)
+                        </button>
+                        <button class="sync-tab-btn" data-tab="backup">
+                            <i class="fa-solid fa-file-code"></i> Sao lưu JSON
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: QR Code & Handover Link -->
+                    <div id="tabSyncQr" class="sync-tab-pane active">
+                        <div class="sync-current-status-banner">
+                            <div class="sync-status-icon"><i class="fa-solid fa-book-open"></i></div>
+                            <div class="sync-status-info">
+                                <div class="sync-status-book" id="syncStatusBookTitle">Kinh Tế Học Cơ Bản</div>
+                                <div class="sync-status-page" id="syncStatusPage">Đang ở Trang 1 / 784 • Lịch sử & Đánh dấu trang</div>
+                            </div>
+                        </div>
+
+                        <div class="qr-presentation-box">
+                            <div id="syncQrCodeContainer" class="qr-canvas-wrapper">
+                                <!-- QR rendered dynamically -->
+                            </div>
+                            <p class="qr-instruction">
+                                <i class="fa-solid fa-mobile-screen"></i> <strong>Lấy camera điện thoại quét mã trên</strong> để tiếp tục đọc đúng trang này!
+                            </p>
+                        </div>
+
+                        <div class="sync-url-wrapper">
+                            <label class="sync-input-label">Hoặc mở liên kết đồng bộ này trên điện thoại:</label>
+                            <div class="sync-copy-group">
+                                <input type="text" id="syncUrlInput" readonly value="">
+                                <button id="btnCopySyncUrl" class="btn-primary copy-btn" title="Sao chép link">
+                                    <i class="fa-solid fa-copy"></i> Sao chép
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="local-ip-hint" id="localIpHintBlock">
+                            <div class="local-ip-hint-header">
+                                <i class="fa-solid fa-network-wired"></i>
+                                <span>Chạy local trên PC? Thay <code>localhost</code> bằng IP Wi-Fi để điện thoại truy cập:</span>
+                            </div>
+                            <div class="ip-edit-row">
+                                <input type="text" id="customHostInput" placeholder="VD: 192.168.1.101:8000">
+                                <button id="btnApplyCustomHost" class="btn-secondary btn-sm">Cập nhật QR</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Cloud Sync Key -->
+                    <div id="tabSyncCloud" class="sync-tab-pane">
+                        <div class="cloud-sync-card">
+                            <h4><i class="fa-solid fa-key"></i> Mã Đồng Bộ Cá Nhân (Sync Key)</h4>
+                            <p class="cloud-desc">Dùng một mã bí mật duy nhất để đồng bộ 2 chiều giữa tất cả các máy tính và điện thoại của bạn.</p>
+                            
+                            <div class="sync-key-input-row">
+                                <input type="text" id="cloudSyncKeyInput" placeholder="Ví dụ: READ-8899" maxlength="24">
+                                <button id="btnGenerateSyncKey" class="btn-secondary" title="Tạo mã ngẫu nhiên">
+                                    <i class="fa-solid fa-shuffle"></i> Tạo mã mới
+                                </button>
+                            </div>
+
+                            <div class="cloud-sync-actions">
+                                <button id="btnPushToCloud" class="btn-primary">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Lưu tiến độ lên Đám Mây (Push)
+                                </button>
+                                <button id="btnPullFromCloud" class="btn-secondary">
+                                    <i class="fa-solid fa-cloud-arrow-down"></i> Tải về máy này (Pull)
+                                </button>
+                            </div>
+
+                            <div class="cloud-auto-sync-opt">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="chkAutoCloudSync">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                                <div class="toggle-label-text">
+                                    <strong>Tự động lưu lên đám mây khi đổi trang</strong>
+                                    <small>Tiến độ đọc và lịch sử sẽ tự động đồng bộ khi có kết nối mạng</small>
+                                </div>
+                            </div>
+
+                            <div id="cloudSyncStatusMsg" class="cloud-status-msg">
+                                Chưa có lần đồng bộ đám mây nào.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Backup & Restore JSON -->
+                    <div id="tabSyncBackup" class="sync-tab-pane">
+                        <div class="backup-grid">
+                            <div class="backup-box">
+                                <i class="fa-solid fa-file-export backup-icon"></i>
+                                <h4>Xuất Dữ Liệu (Backup)</h4>
+                                <p>Tải toàn bộ vị trí đọc, bookmark và lịch sử về máy dưới dạng tệp JSON an toàn.</p>
+                                <button id="btnExportJson" class="btn-primary">
+                                    <i class="fa-solid fa-download"></i> Tải file sao lưu (.json)
+                                </button>
+                            </div>
+                            <div class="backup-box">
+                                <i class="fa-solid fa-file-import backup-icon"></i>
+                                <h4>Khôi Phục (Restore)</h4>
+                                <p>Nhập tệp dữ liệu JSON đã sao lưu từ bất kỳ máy nào để phục hồi toàn bộ tiến độ đọc.</p>
+                                <input type="file" id="importJsonFileInput" accept=".json" style="display: none;">
+                                <button id="btnImportJson" class="btn-secondary">
+                                    <i class="fa-solid fa-upload"></i> Chọn file để nạp
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Navigation Bar -->
+        <nav class="mobile-bottom-bar" id="mobileBottomBar">
+            <button id="btnMobileToc" class="mobile-nav-item" title="Mục lục sách">
+                <i class="fa-solid fa-bars-staggered"></i>
+                <span>Mục lục</span>
+            </button>
+            <button id="btnMobileLibrary" class="mobile-nav-item" title="Tủ sách">
+                <i class="fa-solid fa-book-bookmark"></i>
+                <span>Tủ sách</span>
+            </button>
+            <div class="mobile-page-flipper">
+                <button id="btnMobilePrev" class="mobile-flip-btn" title="Trang trước">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <span id="mobilePageIndicator" class="mobile-page-num" title="Chạm để nhập số trang">1/784</span>
+                <button id="btnMobileNext" class="mobile-flip-btn" title="Trang sau">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+            <button id="btnMobileSync" class="mobile-nav-item" title="Đồng bộ đa thiết bị">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span>Đồng bộ</span>
+            </button>
+            <button id="btnMobileSettings" class="mobile-nav-item" title="Tùy chỉnh giao diện">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Cài đặt</span>
+            </button>
+        </nav>
+
+        <!-- Toast Notifications Container -->
+        <div id="toastContainer" class="toast-container"></div>
     </div>
 
     <!-- Application Script -->

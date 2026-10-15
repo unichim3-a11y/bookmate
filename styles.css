@@ -729,3 +729,660 @@ body {
     color: var(--accent);
 }
 
+/* =====================================================  CROSS-DEVICE SYNC MODAL  */
+.sync-btn-highlight {
+    color: var(--accent);
+    position: relative;
+}
+.sync-btn-highlight:hover {
+    background: var(--accent-glow);
+}
+.sync-btn-highlight::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.sync-modal-card {
+    max-width: 580px;
+    width: 92%;
+}
+.sync-header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.sync-modal-body {
+    padding: 16px 18px;
+    overflow-y: auto;
+    max-height: 80vh;
+}
+.sync-tabs {
+    display: flex;
+    background: var(--bg-input);
+    padding: 3px;
+    border-radius: var(--r-sm);
+    gap: 2px;
+    margin-bottom: 14px;
+}
+.sync-tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 7px 8px;
+    border-radius: var(--r-sm);
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all var(--ease);
+    white-space: nowrap;
+}
+.sync-tab-btn.active {
+    background: var(--bg-card);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.sync-tab-pane {
+    display: none;
+}
+.sync-tab-pane.active {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tab 1: QR & Handover Link */
+.sync-current-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: var(--accent-glow);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    margin-bottom: 14px;
+}
+.sync-status-icon {
+    font-size: 1.3rem;
+    color: var(--accent);
+}
+.sync-status-book {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: var(--text-ink);
+}
+.sync-status-page {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.qr-presentation-box {
+    text-align: center;
+    padding: 16px;
+    background: var(--bg-input);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--r-md);
+    margin-bottom: 14px;
+}
+.qr-canvas-wrapper {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px;
+    background: #ffffff;
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm);
+    min-width: 170px;
+    min-height: 170px;
+}
+.qr-canvas-wrapper img, .qr-canvas-wrapper canvas {
+    display: block;
+    max-width: 180px;
+    height: auto;
+}
+.qr-instruction {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-top: 10px;
+}
+.qr-instruction strong {
+    color: var(--text-ink);
+}
+
+.sync-url-wrapper {
+    margin-bottom: 12px;
+}
+.sync-input-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.sync-copy-group {
+    display: flex;
+    gap: 6px;
+}
+.sync-copy-group input {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 7px 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--text-ink);
+    outline: none;
+}
+.sync-copy-group input:focus {
+    border-color: var(--accent);
+}
+.copy-btn {
+    padding: 7px 12px;
+    font-size: 0.74rem;
+}
+
+.local-ip-hint {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+.local-ip-hint-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.local-ip-hint code {
+    background: var(--bg-card);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+}
+.ip-edit-row {
+    display: flex;
+    gap: 6px;
+}
+.ip-edit-row input {
+    flex: 1;
+    font-size: 0.74rem;
+    padding: 4px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--text-ink);
+    outline: none;
+}
+.btn-sm {
+    padding: 4px 9px;
+    font-size: 0.72rem;
+}
+
+/* Tab 2: Cloud Sync Key */
+.cloud-sync-card {
+    padding: 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+.cloud-sync-card h4 {
+    font-size: 0.85rem;
+    color: var(--text-ink);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cloud-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+.sync-key-input-row {
+    display: flex;
+    gap: 7px;
+    margin-bottom: 12px;
+}
+.sync-key-input-row input {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-sm);
+    color: var(--accent);
+    outline: none;
+    letter-spacing: 1px;
+}
+.sync-key-input-row input:focus {
+    border-color: var(--accent);
+}
+.cloud-sync-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.cloud-auto-sync-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider-toggle {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--border);
+    transition: 0.2s;
+    border-radius: 20px;
+}
+.slider-toggle:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.2s;
+    border-radius: 50%;
+}
+.toggle-switch input:checked + .slider-toggle {
+    background-color: var(--accent);
+}
+.toggle-switch input:checked + .slider-toggle:before {
+    transform: translateX(16px);
+}
+.toggle-label-text {
+    display: flex;
+    flex-direction: column;
+}
+.toggle-label-text strong {
+    font-size: 0.76rem;
+    color: var(--text-ink);
+}
+.toggle-label-text small {
+    font-size: 0.67rem;
+    color: var(--text-faint);
+}
+.cloud-status-msg {
+    margin-top: 10px;
+    padding: 7px 10px;
+    border-radius: var(--r-sm);
+    font-size: 0.7rem;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+/* Tab 3: Backup Grid */
+.backup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.backup-box {
+    padding: 16px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.backup-icon {
+    font-size: 1.8rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+.backup-box h4 {
+    font-size: 0.82rem;
+    color: var(--text-ink);
+    margin-bottom: 4px;
+}
+.backup-box p {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+.backup-box button {
+    width: 100%;
+    justify-content: center;
+}
+
+/* =====================================================  MOBILE BOTTOM BAR  */
+.mobile-bottom-bar {
+    display: none;
+}
+
+/* =====================================================  TOAST NOTIFICATIONS  */
+.toast-container {
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+.toast-item {
+    pointer-events: auto;
+    background: var(--bg-page);
+    color: var(--text-ink);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--r-md);
+    padding: 10px 14px;
+    box-shadow: var(--shadow-md);
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    max-width: 340px;
+    animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.toast-item i {
+    font-size: 1rem;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+@keyframes toastSlideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* =====================================================  MOBILE RESPONSIVE OVERHAUL  */
+@media (max-width: 768px) {
+    /* Navbar compact */
+    .navbar {
+        height: 46px;
+        padding: 0 8px;
+    }
+    .header-divider, #currentChapterHeaderTitle {
+        display: none !important;
+    }
+    .book-switch-btn {
+        max-width: 125px;
+        padding: 3px 6px;
+        font-size: 0.72rem;
+    }
+    .book-title-short {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .quick-nav-controls {
+        padding: 1px 2px;
+    }
+    .page-indicator-badge {
+        padding: 0 4px;
+        font-size: 0.74rem;
+    }
+    
+    /* Hide non-essential top buttons on mobile (they are accessible in bottom bar or library modal) */
+    #btnOpenLibraryQuick, #btnHistoryQuick, #btnFullscreen {
+        display: none !important;
+    }
+
+    /* Sidebar Drawer Slide-in with smooth overlay */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 84vw;
+        max-width: 320px;
+        z-index: 1000;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+        margin-left: 0;
+        transform: translateX(0);
+        transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .sidebar.closed {
+        transform: translateX(-100%);
+        margin-left: 0;
+    }
+    .sidebar-backdrop {
+        z-index: 999;
+        backdrop-filter: blur(4px);
+    }
+
+    /* Content Area & Card */
+    .reader-viewport {
+        padding-bottom: 74px; /* Room for bottom bar */
+    }
+    .reading-controls-bar {
+        padding: 5px 8px;
+    }
+    .mode-pill {
+        padding: 3px 10px;
+        font-size: 0.7rem;
+    }
+    .book-hero-banner {
+        margin: 10px 8px 0;
+        padding: 14px 12px;
+        border-radius: var(--r-md);
+    }
+    .hero-title {
+        font-size: 1.15rem;
+    }
+    .hero-stats {
+        gap: 10px;
+        font-size: 0.68rem;
+    }
+    .reader-content-card {
+        margin: 10px 8px 80px;
+        padding: 20px 14px;
+        border-radius: var(--r-md);
+        box-shadow: none;
+    }
+    .chapter-title {
+        font-size: 1.25rem;
+    }
+    .text-content-area {
+        font-size: 17px;
+    }
+    .text-content-area p:first-of-type::first-letter {
+        font-size: 2.4em;
+    }
+
+    /* Mobile Bottom Navigation Bar */
+    .mobile-bottom-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 54px;
+        background: var(--bg-header);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid var(--border);
+        align-items: center;
+        justify-content: space-around;
+        z-index: 100;
+        padding: 0 4px env(safe-area-inset-bottom) 4px;
+        user-select: none;
+    }
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 4px 6px;
+        border-radius: 6px;
+        transition: all var(--ease);
+        flex: 1;
+        max-width: 60px;
+    }
+    .mobile-nav-item i {
+        font-size: 0.95rem;
+    }
+    .mobile-nav-item:active, .mobile-nav-item:hover {
+        color: var(--accent);
+        background: var(--accent-glow);
+    }
+    .mobile-page-flipper {
+        display: flex;
+        align-items: center;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 1px 3px;
+        gap: 2px;
+    }
+    .mobile-flip-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: var(--text-ink);
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        transition: all var(--ease);
+    }
+    .mobile-flip-btn:active {
+        background: var(--bg-card);
+        color: var(--accent);
+    }
+    .mobile-page-num {
+        font-size: 0.72rem;
+        font-weight: 800;
+        font-family: var(--font-mono);
+        color: var(--accent);
+        padding: 0 4px;
+        min-width: 48px;
+        text-align: center;
+    }
+
+    /* Settings Drawer on Mobile */
+    .drawer-modal {
+        width: 100%;
+        max-width: 340px;
+    }
+
+    /* Library Modal on Mobile */
+    .library-modal-card {
+        width: 95%;
+        max-height: 88vh;
+    }
+    .library-books-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Audio Bar on Mobile */
+    .audio-player-bar {
+        bottom: 64px; /* Float above mobile bottom bar */
+        width: 92%;
+        padding: 6px 12px;
+        gap: 8px;
+    }
+    .audio-snippet {
+        max-width: 130px;
+    }
+
+    /* Backup Grid on Mobile */
+    .backup-grid {
+        grid-template-columns: 1fr;
+    }
+    .cloud-sync-actions {
+        grid-template-columns: 1fr;
+    }
+
+    /* Toast container placement */
+    .toast-container {
+        top: 50px;
+        left: 12px;
+        right: 12px;
+        align-items: center;
+    }
+    .toast-item {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 4px;
+    }
+    .icon-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 0.82rem;
+    }
+    .reader-content-card {
+        margin: 6px 4px 75px;
+        padding: 16px 12px;
+        border: none;
+    }
+    .book-hero-banner {
+        margin: 6px 4px 0;
+        padding: 12px 10px;
+    }
+    .reader-footer-nav {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .btn-primary, .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
