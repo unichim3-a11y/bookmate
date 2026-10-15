@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="beige">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Reader - Đọc Sách Điện Tử HD</title>
+    <meta name="description" content="Ứng dụng đọc sách điện tử chất lượng cao với Kinh Tế Học Cơ Bản (Thomas Sowell) và Sapiens (Yuval Noah Harari).">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- App Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-layout">
+        <!-- Top Progress Bar -->
+        <div class="reading-progress-container">
+            <div id="readingProgressBar" class="reading-progress-bar"></div>
+        </div>
+
+        <!-- Top Navigation Bar -->
+        <header class="navbar">
+            <div class="nav-left">
+                <button id="btnToggleSidebar" class="icon-btn" title="Mục lục (Key: T)">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                </button>
+                <button id="btnOpenLibraryNav" class="book-switch-btn" title="Đổi sách / Mở tủ sách (Key: L)">
+                    <i class="fa-solid fa-book-bookmark book-icon"></i>
+                    <span id="currentBookNameNav" class="book-title-short">Đang tải...</span>
+                    <i class="fa-solid fa-chevron-down caret-icon"></i>
+                </button>
+                <span class="header-divider">/</span>
+                <span id="currentChapterHeaderTitle" class="current-chapter-title">Đang tải...</span>
+            </div>
+
+            <div class="nav-center">
+                <div class="quick-nav-controls">
+                    <button id="btnPrevPage" class="nav-arrow-btn" title="Trang trước (Phím Mũi tên trái)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div class="page-indicator-badge">
+                        <span id="currentPageInput" contenteditable="true" title="Bấm để nhập số trang">1</span>
+                        <span class="page-total-slash">/</span>
+                        <span id="totalPagesCount">--</span>
+                    </div>
+                    <button id="btnNextPage" class="nav-arrow-btn" title="Trang tiếp (Phím Mũi tên phải)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="nav-right">
+                <button id="btnOpenLibraryQuick" class="icon-btn highlight-btn" title="Tủ sách (Key: L)">
+                    <i class="fa-solid fa-book"></i>
+                </button>
+                <button id="btnSearch" class="icon-btn" title="Tìm kiếm (Key: S)">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <button id="btnAudioPlayer" class="icon-btn" title="Đọc bài viết bằng giọng nói">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btnBookmarkCurrent" class="icon-btn" title="Đánh dấu trang (Key: B)">
+                    <i class="fa-regular fa-bookmark" id="bookmarkIcon"></i>
+                </button>
+                <button id="btnHistoryQuick" class="icon-btn" title="Lịch sử đọc">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </button>
+                <button id="btnSettings" class="icon-btn" title="Tùy chỉnh giao diện">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+                <button id="btnFullscreen" class="icon-btn" title="Toàn màn hình (Key: F)">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="main-body">
+            <!-- Left Sidebar: TOC & Bookmarks -->
+            <aside id="sidebar" class="sidebar">
+                <!-- Book Info in Sidebar -->
+                <div class="sidebar-book-badge">
+                    <div class="sidebar-book-details">
+                        <span class="sidebar-book-prefix"><i class="fa-solid fa-book-open"></i> Đang đọc</span>
+                        <h4 id="sidebarBookTitle" class="sidebar-book-title">Đang tải...</h4>
+                        <span id="sidebarBookAuthor" class="sidebar-book-author">...</span>
+                    </div>
+                    <button id="btnSwitchBookSidebar" class="sidebar-switch-btn" title="Chọn tác phẩm khác">
+                        <i class="fa-solid fa-layer-group"></i> Tủ sách
+                    </button>
+                </div>
+
+                <div class="sidebar-header">
+                    <div class="sidebar-tabs">
+                        <button id="tabTocBtn" class="tab-btn active" data-tab="toc">
+                            <i class="fa-solid fa-list-ul"></i> Mục lục
+                        </button>
+                        <button id="tabBookmarksBtn" class="tab-btn" data-tab="bookmarks">
+                            <i class="fa-solid fa-bookmark"></i> Đánh dấu (<span id="bookmarkCountBadge">0</span>)
+                        </button>
+                        <button id="tabHistoryBtn" class="tab-btn" data-tab="history">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử (<span id="historyCountBadge">0</span>)
+                        </button>
+                    </div>
+                    <button id="btnCloseSidebar" class="icon-btn close-sidebar-btn">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="sidebar-search-box">
+                    <i class="fa-solid fa-filter"></i>
+                    <input type="text" id="tocFilterInput" placeholder="Lọc mục lục chương...">
+                </div>
+
+                <div class="sidebar-content">
+                    <!-- TOC Tab Content -->
+                    <div id="tabTocContent" class="tab-pane active">
+                        <ul id="tocList" class="toc-list">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </div>
+
+                    <!-- Bookmarks Tab Content -->
+                    <div id="tabBookmarksContent" class="tab-pane">
+                        <div id="bookmarksList" class="bookmarks-list">
+                            <div class="empty-state">
+                                <i class="fa-regular fa-bookmark"></i>
+                                <p>Chưa có trang nào được đánh dấu</p>
+                                <small>Bấm vào biểu tượng thẻ bài ở thanh trên cùng để đánh dấu trang hiện tại.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab Content -->
+                    <div id="tabHistoryContent" class="tab-pane">
+                        <div class="history-actions-bar">
+                            <span class="history-summary-text" id="historySummaryText">0 trang đã đọc</span>
+                            <button id="btnClearHistory" class="text-danger-btn" title="Xóa toàn bộ lịch sử">
+                                <i class="fa-solid fa-trash-can"></i> Xóa lịch sử
+                            </button>
+                        </div>
+                        <div id="historyList" class="history-list">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                <p>Chưa có lịch sử đọc</p>
+                                <small>Các trang bạn đọc sẽ được tự động lưu lại tại đây.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Backdrop overlay for mobile sidebar -->
+            <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+            <!-- Reading Content Area -->
+            <main id="readerViewport" class="reader-viewport">
+                <!-- Floating Reader Control Bar -->
+                <div class="reading-controls-bar">
+                    <button id="btnReadingModeScroll" class="mode-pill active" data-mode="scroll">
+                        <i class="fa-solid fa-scroll"></i> Cuộn đọc liên tục
+                    </button>
+                    <button id="btnReadingModePage" class="mode-pill" data-mode="page">
+                        <i class="fa-solid fa-book-open"></i> Từng trang
+                    </button>
+                </div>
+
+                <!-- Book Header Cover Card -->
+                <div id="bookHeroBanner" class="book-hero-banner">
+                    <div id="heroCoverBadge" class="hero-badge">Sách Điện Tử HD</div>
+                    <h1 id="heroBookTitle" class="hero-title">Đang tải...</h1>
+                    <p id="heroBookAuthor" class="hero-author"><i class="fa-solid fa-feather"></i> ...</p>
+                    <p id="heroBookDescription" class="hero-description"></p>
+                    <div class="hero-stats">
+                        <span><i class="fa-solid fa-file-lines"></i> <strong id="heroTotalPages">0</strong> Trang</span>
+                        <span><i class="fa-solid fa-book"></i> <strong id="heroTotalChapters">0</strong> Mục & Chương</span>
+                        <span><i class="fa-solid fa-clock"></i> Khoảng <strong id="heroReadingTime">--</strong></span>
+                    </div>
+                </div>
+
+                <!-- Content Render Box -->
+                <article id="readerContentCard" class="reader-content-card">
+                    <div id="chapterHeader" class="chapter-header-block">
+                        <span id="chapterBadge" class="chapter-badge">Chương 1</span>
+                        <h2 id="chapterTitleDisplay" class="chapter-title">Đang tải...</h2>
+                        <div class="chapter-meta">
+                            <span id="chapPageRange"><i class="fa-solid fa-bookmark"></i> Trang --</span>
+                            <span id="chapEstTime"><i class="fa-solid fa-stopwatch"></i> -- phút đọc</span>
+                            <span id="chapWordCount"><i class="fa-solid fa-pen-nib"></i> -- từ</span>
+                        </div>
+                    </div>
+
+                    <!-- Paragraphs text container -->
+                    <div id="textContentArea" class="text-content-area">
+                        <div class="loading-spinner">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            <p>Đang tải dữ liệu sách Sapiens...</p>
+                        </div>
+                    </div>
+
+                    <!-- Pagination Footer inside article -->
+                    <div class="reader-footer-nav">
+                        <button id="btnFooterPrev" class="btn-secondary">
+                            <i class="fa-solid fa-arrow-left"></i> Trang trước
+                        </button>
+                        <div class="footer-page-status">
+                            Trang <span id="footerCurrPage">1</span> / <span id="footerTotalPages">481</span>
+                        </div>
+                        <button id="btnFooterNext" class="btn-primary">
+                            Trang sau <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
+            </main>
+        </div>
+
+        <!-- Settings Modal / Drawer -->
+        <div id="settingsDrawer" class="drawer-modal">
+            <div class="drawer-header">
+                <h3><i class="fa-solid fa-sliders"></i> Tùy Chỉnh Giao Diện</h3>
+                <button id="btnCloseSettings" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="drawer-body">
+                <!-- Color Themes -->
+                <div class="setting-group">
+                    <label class="setting-label">Giao diện màu sắc</label>
+                    <div class="theme-picker-grid">
+                        <button class="theme-btn active" data-theme="beige">
+                            <span class="theme-preview beige-preview">Aa</span>
+                            <span>Be ấm (Beige)</span>
+                        </button>
+                        <button class="theme-btn" data-theme="light">
+                            <span class="theme-preview light-preview">Aa</span>
+                            <span>Sáng (Light)</span>
+                        </button>
+                        <button class="theme-btn" data-theme="dark">
+                            <span class="theme-preview dark-preview">Aa</span>
+                            <span>Tối (Dark)</span>
+                        </button>
+                        <button class="theme-btn" data-theme="oled">
+                            <span class="theme-preview oled-preview">Aa</span>
+                            <span>OLED (Đen sâu)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Font Family -->
+                <div class="setting-group">
+                    <label class="setting-label">Kiểu chữ (Font)</label>
+                    <div class="font-picker-grid">
+                        <button class="font-btn active" data-font="Lora" style="font-family: 'Lora', serif;">Lora (Serif)</button>
+                        <button class="font-btn" data-font="Merriweather" style="font-family: 'Merriweather', serif;">Merriweather</button>
+                        <button class="font-btn" data-font="Plus Jakarta Sans" style="font-family: 'Plus Jakarta Sans', sans-serif;">Sans-Serif</button>
+                    </div>
+                </div>
+
+                <!-- Font Size -->
+                <div class="setting-group">
+                    <div class="setting-label-with-val">
+                        <label class="setting-label">Kích thước chữ</label>
+                        <span id="fontSizeValue">18px</span>
+                    </div>
+                    <div class="slider-control">
+                        <button id="btnDecreaseFont" class="slider-btn"><i class="fa-solid fa-minus"></i></button>
+                        <input type="range" id="fontSizeRange" min="14" max="28" step="1" value="18">
+                        <button id="btnIncreaseFont" class="slider-btn"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <!-- Line Height -->
+                <div class="setting-group">
+                    <div class="setting-label-with-val">
+                        <label class="setting-label">Khoảng cách dòng</label>
+                        <span id="lineHeightValue">1.8</span>
+                    </div>
+                    <div class="slider-control">
+                        <input type="range" id="lineHeightRange" min="1.4" max="2.4" step="0.1" value="1.8">
+                    </div>
+                </div>
+
+                <!-- Reader Column Width -->
+                <div class="setting-group">
+                    <label class="setting-label">Độ rộng trang đọc</label>
+                    <div class="width-picker-grid">
+                        <button class="width-btn" data-width="520px">Hẹp</button>
+                        <button class="width-btn active" data-width="680px">Vừa</button>
+                        <button class="width-btn" data-width="900px">Rộng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Book Library Modal -->
+        <div id="bookLibraryModal" class="modal-overlay">
+            <div class="modal-card library-modal-card">
+                <div class="modal-header">
+                    <div class="library-header-title">
+                        <i class="fa-solid fa-book-bookmark modal-title-icon"></i>
+                        <div>
+                            <h3>Tủ Sách Điện Tử HD</h3>
+                            <p class="modal-subtitle">Chọn tác phẩm để bắt đầu đọc hoặc chuyển đổi sách</p>
+                        </div>
+                    </div>
+                    <button id="btnCloseLibrary" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body library-modal-body">
+                    <div id="libraryBooksGrid" class="library-books-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full-text Search Modal -->
+        <div id="searchModal" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3 id="searchModalHeaderTitle"><i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm trong sách</h3>
+                    <button id="btnCloseSearch" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="search-input-wrapper">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="fullSearchInput" placeholder="Nhập từ khóa tìm kiếm..." autofocus>
+                        <button id="btnClearSearch" class="icon-btn clear-search-btn"><i class="fa-solid fa-circle-xmark"></i></button>
+                    </div>
+
+                    <div class="search-status-bar">
+                        <span id="searchResultStats">Nhập ít nhất 2 ký tự để tìm kiếm.</span>
+                    </div>
+
+                    <div id="searchResultsList" class="search-results-list">
+                        <!-- Search results rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio TTS Speech Bar -->
+        <div id="audioPlayerBar" class="audio-player-bar hidden">
+            <div class="audio-info">
+                <i class="fa-solid fa-volume-high audio-pulse-icon"></i>
+                <div class="audio-text-wrapper">
+                    <span class="audio-label">Đang đọc thành tiếng:</span>
+                    <span id="audioPlayingTextSnippet" class="audio-snippet">Đang chuẩn bị...</span>
+                </div>
+            </div>
+            <div class="audio-controls">
+                <button id="btnAudioPlayPause" class="audio-btn"><i class="fa-solid fa-play"></i></button>
+                <button id="btnAudioStop" class="audio-btn"><i class="fa-solid fa-stop"></i></button>
+                <select id="selectAudioSpeed" class="audio-speed-select">
+                    <option value="0.8">0.8x</option>
+                    <option value="1" selected>1.0x</option>
+                    <option value="1.2">1.2x</option>
+                    <option value="1.5">1.5x</option>
+                </select>
+                <button id="btnCloseAudioBar" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
